@@ -3,55 +3,57 @@ var path = require('path');
 var dependencyCheck = require('dependency-check');
 
 module.exports = function (grunt) {
-	grunt.registerMultiTask('dependencyCheck', 'Ensure used dependencies matches with listed ones', function () {
-		var done = this.async();
-		var opts = this.options({
-			package: '.',
-			missing: true,
-			unused: true,
-			excludeUnusedDev: false,
-			ignoreUnused: [],
-			noDefaultEntries: true
-		});
-        
-		dependencyCheck({
-			entries: this.filesSrc.map(function (el) {
-				return path.relative(opts.package, el);
-			}),
-			path: opts.package,
-			noDefaultEntries: opts.noDefaultEntries
-		}, function (err, data) {
-			if (err) {
-				grunt.warn(err);
-				done();
-				return;
-			}
+  grunt.registerMultiTask('dependencyCheck', 'Ensure used dependencies matches with listed ones', function () {
+    var done = this.async();
+    var opts = this.options({
+      package: '.',
+      missing: true,
+      unused: true,
+      excludeUnusedDev: false,
+      ignoreUnused: [],
+      noDefaultEntries: true
+    });
 
-			var res;
-			var pkg = data.package;
-			var deps = data.used;
 
-			if (opts.unused) {
-				res = dependencyCheck.extra(pkg, deps, {
-					excludeDev: opts.excludeUnusedDev,
-					ignore: opts.ignoreUnused
-				});
+    dependencyCheck({
+      entries: this.filesSrc.map(function (el) {
+        return path.relative(opts.package, el);
+      }),
+      path: opts.package,
+      noDefaultEntries: opts.noDefaultEntries
+    }, function (err, data) {
+      if (err) {
+        grunt.warn(err);
+        done();
+        return;
+      }
 
-				if (res.length > 0) {
-					grunt.log.error('Packages in package.json not used in your code:', grunt.log.wordlist(res, {color: 'red'}));
-					done(false);
-				}
-			}
+      var res;
+      var pkg = data.package;
+      var deps = data.used;
 
-			if (opts.missing) {
-				res = dependencyCheck.missing(pkg, deps);
+      if (opts.unused) {
+        res = dependencyCheck.extra(pkg, deps, {
+          excludeDev: opts.excludeUnusedDev,
+          ignore: opts.ignoreUnused
+        });
 
-				if (res.length > 0) {
-					grunt.log.error('Dependencies not listed in package.json:', grunt.log.wordlist(res, {color: 'red'}));
-				    done(false);
-				    
-				}
-			}
-		});
-	});
+        if (res.length > 0) {
+          grunt.fail.error('Packages in package.json not used in your code: ' + grunt.log.wordlist(res, {color: 'red'}));
+        }
+      }
+
+      if (opts.missing) {
+        res = dependencyCheck.missing(pkg, deps);
+
+        if (res.length > 0) {
+          // grunt.log.ok("res=" + JSON.stringify(res));
+          grunt.fail.warn('Dependencies not listed in package.json: ' + grunt.log.wordlist(res, {color: 'red'}));
+        }
+      }
+
+      grunt.log.ok("All dependencies statements passed validation");
+      done();
+    });
+  });
 };
